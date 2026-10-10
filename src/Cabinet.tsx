@@ -1,4 +1,4 @@
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 type Kind="breaker"|"rcd"|"contactor"|"overload"|"terminal"|"rail"|"duct";
 type Item={id:number;kind:Kind;x:number;y:number};
 const catalog:{kind:Kind;name:string;width:number;height:number;ref:string}[]=[
@@ -43,16 +43,51 @@ function snapToRail(item:Item,all:Item[]):Item{
  return overlaps?item:{...item,x,y};
 }
 const sample:Item[]=[{id:1,kind:"rail",x:115,y:180},{id:2,kind:"breaker",x:140,y:128},{id:3,kind:"rcd",x:220,y:128},{id:4,kind:"contactor",x:345,y:124}];
-function restore():Item[]{try{const a=JSON.parse(localStorage.getItem("electrolab-cabinet-v01")||"null");if(Array.isArray(a)&&a.every(x=>catalog.some(t=>t.kind===x.kind)&&Number.isFinite(x.x)&&Number.isFinite(x.y)))return a}catch{}return sample}
+function validLayout(value:unknown):value is Item[]{
+ return Array.isArray(value)&&value.length<=150&&value.every((x:unknown)=>{
+  if(!x||typeof x!=="object")return false;
+  const item=x as Partial<Item>;
+  return Number.isSafeInteger(item.id)&&typeof item.kind==="string"&&catalog.some(d=>d.kind===item.kind)&&
+   typeof item.x==="number"&&typeof item.y==="number"&&Number.isFinite(item.x)&&Number.isFinite(item.y)&&
+   item.x>=0&&item.x<=720&&item.y>=0&&item.y<=520;
+ })&&new Set(value.map((x:Item)=>x.id)).size===value.length;
+}
+function downloadLayout(items:Item[]){
+ const blob=new Blob([JSON.stringify({format:"electrolab-cabinet",version:1,items},null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");link.href=url;link.download="electrolab-cuadro.json";document.body.appendChild(link);link.click();link.remove();
+ window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function restore():Item[]{try{const a=JSON.parse(localStorage.getItem("electrolab-cabinet-v01")||"null");if(validLayout(a))return a}catch{}return sample}
 export default function Cabinet(){
  const [items,setItems]=useState<Item[]>(restore),[view,setView]=useState<"realistic"|"technical">("realistic"),[selected,setSelected]=useState<number|null>(null),[drag,setDrag]=useState<{id:number;dx:number;dy:number;origin:Item}|null>(null),[zoom,setZoom]=useState(1);
  useEffect(()=>{localStorage.setItem("electrolab-cabinet-v01",JSON.stringify(items))},[items]);
- const add=(kind:Kind)=>{const id=Math.max(0,...items.map(x=>x.id))+1;setItems(v=>{const item={id,kind,x:130+(v.length%5)*85,y:245};let candidate=snapToRail(item,v);if(collides(candidate,v)){for(let y=70;y<420;y+=20){for(let x=90;x<600;x+=20){const test={...item,x,y};if(!collides(test,v)){candidate=test;break}}if(!collides(candidate,v))break}}return [...v,candidate]});setSelected(id)};
+ const add=(kind:Kind)=>{const id=Math.max(0,...items.map(x=>x.id))+1;setItems(v=>{const item={id,kind,x:130+(v.length%5)*85,y:245};let candidate=snapToRail(item,v);if(collides(candidate,v)){for(let y=70;y<420;y+=20){for(let x=90;x<600;x+=20){const test={...item,x,y};if(!collides(test,v)){candidate=test;break}}if(!collides(candidate,v))break}}if(collides(candidate,v)){setNotice("No hay espacio libre para añadir ese componente.");return v;}setNotice("");return [...v,candidate]});setSelected(id)};
+ const fileInput=useRef<HTMLInputElement>(null);
+ const [notice,setNotice]=useState("");
+ const exportLayout=()=>{downloadLayout(items);setNotice("Cuadro exportado en formato JSON.");};
+ const importLayout=async(file:File|undefined)=>{
+  if(!file)return;
+  try{
+   if(file.size>100000){setNotice("Archivo demasiado grande (máximo 100 KB).");return;}
+   const data:unknown=JSON.parse(await file.text());
+   if(!data||typeof data!=="object"){setNotice("Archivo no válido.");return;}
+   const payload=data as {format?:unknown;version?:unknown;items?:unknown};
+   if(payload.format!=="electrolab-cabinet"||payload.version!==1||!validLayout(payload.items)){
+    setNotice("Formato incompatible o datos incorrectos.");return;
+   }
+   const loaded=payload.items;
+   if(loaded.some((item,i)=>collides(item,loaded.filter((_,j)=>i!==j)))){
+    setNotice("El archivo contiene dispositivos superpuestos. No se ha importado.");return;
+   }
+   setItems(loaded);setSelected(null);setNotice("Cuadro importado correctamente.");
+  }catch{setNotice("No se pudo leer el archivo JSON.");}
+ };
  const selectedItem=items.find(x=>x.id===selected);
  const selectedSpec=selectedItem?referenceSpecs[selectedItem.kind]:null;
  const toLocal=(svg:SVGSVGElement,e:React.PointerEvent)=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM()!.inverse())};
  return <section className="cabinet"><div className="cabinet-head"><div><h2>Diseñador de cuadros eléctricos</h2><p>Distribución física de componentes · Prototipo de interfaz</p></div><div className="actions"><button className={view==="realistic"?"":"secondary"} onClick={()=>setView("realistic")}>Vista realista*</button><button className={view==="technical"?"":"secondary"} onClick={()=>setView("technical")}>Vista técnica</button></div></div>
- <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Suelta un dispositivo cerca del carril para encajarlo; si una posición se superpone a otro dispositivo, vuelve a su posición anterior.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
+ <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Suelta un dispositivo cerca del carril para encajarlo; si una posición se superpone a otro dispositivo, vuelve a su posición anterior.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><div className="cabinet-file-actions"><button className="secondary" onClick={exportLayout}>↓ Exportar cuadro</button><button className="secondary" onClick={()=>fileInput.current?.click()}>↑ Importar cuadro</button><input ref={fileInput} type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>{void importLayout(e.target.files?.[0]);e.target.value="";}}/>{notice&&<p role="status" className="hint">{notice}</p>}</div><hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
  <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
  <svg className="cabinet-svg" viewBox="0 0 720 520" role="img" aria-label="Armario eléctrico editable con componentes sobre carril DIN" onPointerMove={e=>{if(!drag)return;const p=toLocal(e.currentTarget,e);const px=360+(p.x-360)/zoom,py=260+(p.y-260)/zoom;setItems(v=>v.map(x=>x.id===drag.id?{...x,x:Math.max(30,Math.min(630,Math.round((px-drag.dx)/5)*5)),y:Math.max(35,Math.min(435,Math.round((py-drag.dy)/5)*5))}:x))}} onPointerUp={()=>{if(drag)setItems(v=>v.map(item=>{if(item.id!==drag.id)return item;const snapped=snapToRail(item,v);return collides(snapped,v)?drag.origin:snapped}));setDrag(null)}} onPointerCancel={()=>{if(drag)setItems(v=>v.map(item=>item.id===drag.id?drag.origin:item));setDrag(null)}}>
  <defs><pattern id="cabgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#dae5e9" strokeWidth=".8"/></pattern><linearGradient id="case" x1="0" x2="1"><stop stopColor="#d9e2e5"/><stop offset=".5" stopColor="#f7fafb"/><stop offset="1" stopColor="#bfcdd3"/></linearGradient></defs>
