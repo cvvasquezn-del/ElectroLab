@@ -15,3 +15,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:15px;fl
 
 /* Proportional DIN rail occupancy, based on educational nominal widths */
 .cabinet-scale-row{margin:12px 0 15px}.cabinet-scale-title{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;margin-bottom:5px;color:#173642}.cabinet-scale-title span{white-space:nowrap}.cabinet-scale-track{height:28px;border:2px solid #7c929b;border-radius:4px;background:repeating-linear-gradient(90deg,#e3ebed 0,#e3ebed 6px,#cbd9de 6px,#cbd9de 9px);overflow:hidden}.cabinet-scale-devices{display:flex;height:100%;align-items:stretch}.cabinet-scale-device{min-width:0;box-sizing:border-box;border:1px solid #fff;background:#165572}.cabinet-scale-breaker{background:#009abf}.cabinet-scale-rcd{background:#2b7e94}.cabinet-scale-contactor{background:#165572}.cabinet-scale-overload{background:#e0a33a}.cabinet-scale-terminal{background:#2ed9c3}
+
+/* Selectable devices in the physical-width DIN rail preview */
+.cabinet-scale-device{padding:0;border-radius:0;cursor:pointer;appearance:none;min-height:100%;transition:filter .15s ease}
+.cabinet-scale-device:hover{filter:brightness(1.25)}
+.cabinet-scale-device:focus-visible{outline:3px solid #e1251b;outline-offset:-3px;z-index:2}
+.cabinet-scale-device.cabinet-scale-selected{outline:3px solid #e1251b;outline-offset:-3px;z-index:1}
