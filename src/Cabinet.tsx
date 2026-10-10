@@ -30,17 +30,29 @@ const referenceSpecs:Record<Kind,{widthMm:number;heightMm:number;depthMm:number;
  duct:{widthMm:40,heightMm:300,depthMm:40,mount:"Soporte",terminals:[]}
 };
 const mountedKinds:Kind[]=["breaker","rcd","contactor","overload","terminal"];
+function railSlot(item:Item,all:Item[],rail:Item):Item|null{
+ const d=catalog.find(x=>x.kind===item.kind)!;
+ const y=rail.y+8-d.height/2;
+ const maxX=rail.x+360-d.width;
+ if(maxX<rail.x)return null;
+ const preferred=Math.max(rail.x,Math.min(maxX,rail.x+Math.round((item.x-rail.x)/5)*5));
+ const positions:number[]=[];
+ for(let x=rail.x;x<=maxX;x+=5)positions.push(x);
+ if(!positions.includes(maxX))positions.push(maxX);
+ positions.sort((a,b)=>Math.abs(a-preferred)-Math.abs(b-preferred));
+ for(const x of positions){
+  const candidate={...item,x,y};
+  if(!collides(candidate,all))return candidate;
+ }
+ return null;
+}
 function snapToRail(item:Item,all:Item[]):Item{
  if(!mountedKinds.includes(item.kind))return item;
  const d=catalog.find(x=>x.kind===item.kind)!;
  const rails=all.filter(x=>x.kind==="rail");
  const near=rails.map(rail=>({rail,distance:Math.abs(item.y+d.height/2-(rail.y+8))})).sort((a,b)=>a.distance-b.distance)[0];
- if(!near||near.distance>42)return item;
- const rail=near.rail;
- const x=Math.max(rail.x,Math.min(rail.x+360-d.width,rail.x+Math.round((item.x-rail.x)/5)*5));
- const y=rail.y+8-d.height/2;
- const overlaps=all.some(other=>other.id!==item.id&&mountedKinds.includes(other.kind)&&Math.abs(other.y+catalog.find(d=>d.kind===other.kind)!.height/2-(rail.y+8))<4&&x<other.x+catalog.find(d=>d.kind===other.kind)!.width&&x+d.width>other.x);
- return overlaps?item:{...item,x,y};
+ if(!near||near.distance>75)return item;
+ return railSlot(item,all,near.rail)??item;
 }
 const sample:Item[]=[{id:1,kind:"rail",x:115,y:180},{id:2,kind:"breaker",x:140,y:128},{id:3,kind:"rcd",x:220,y:128},{id:4,kind:"contactor",x:345,y:124}];
 function validLayout(value:unknown):value is Item[]{
@@ -62,7 +74,25 @@ function restore():Item[]{try{const a=JSON.parse(localStorage.getItem("electrola
 export default function Cabinet(){
  const [items,setItems]=useState<Item[]>(restore),[view,setView]=useState<"realistic"|"technical">("realistic"),[selected,setSelected]=useState<number|null>(null),[drag,setDrag]=useState<{id:number;dx:number;dy:number;origin:Item}|null>(null),[zoom,setZoom]=useState(1);
  useEffect(()=>{localStorage.setItem("electrolab-cabinet-v01",JSON.stringify(items))},[items]);
- const add=(kind:Kind)=>{const id=Math.max(0,...items.map(x=>x.id))+1;setItems(v=>{const item={id,kind,x:130+(v.length%5)*85,y:245};let candidate=snapToRail(item,v);if(collides(candidate,v)){for(let y=70;y<420;y+=20){for(let x=90;x<600;x+=20){const test={...item,x,y};if(!collides(test,v)){candidate=test;break}}if(!collides(candidate,v))break}}if(collides(candidate,v)){setNotice("No hay espacio libre para añadir ese componente.");return v;}setNotice("");return [...v,candidate]});setSelected(id)};
+ const add=(kind:Kind)=>{
+  const id=Math.max(0,...items.map(x=>x.id))+1;
+  const item:Item={id,kind,x:130+(items.length%5)*85,y:245};
+  if(mountedKinds.includes(kind)){
+   const rails=items.filter(x=>x.kind==="rail");
+   for(const rail of rails){
+    const candidate=railSlot({...item,x:rail.x},items,rail);
+    if(candidate){setItems(v=>[...v,candidate]);setSelected(id);setNotice("");return;}
+   }
+   if(rails.length){setNotice("No queda un hueco continuo para este dispositivo en los carriles. Añade otro carril.");return;}
+  }
+  for(let y=70;y<420;y+=20){
+   for(let x=90;x<600;x+=20){
+    const candidate={...item,x,y};
+    if(!collides(candidate,items)){setItems(v=>[...v,candidate]);setSelected(id);setNotice("");return;}
+   }
+  }
+  setNotice("No queda espacio disponible en el cuadro.");
+ };
  const fileInput=useRef<HTMLInputElement>(null);
  const [notice,setNotice]=useState("");
  const exportLayout=()=>{downloadLayout(items);setNotice("Cuadro exportado en formato JSON.");};
@@ -98,7 +128,7 @@ export default function Cabinet(){
  });
  const toLocal=(svg:SVGSVGElement,e:React.PointerEvent)=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM()!.inverse())};
  return <section className="cabinet"><div className="cabinet-head"><div><h2>Diseñador de cuadros eléctricos</h2><p>Distribución física de componentes · Prototipo de interfaz</p></div><div className="actions"><button className={view==="realistic"?"":"secondary"} onClick={()=>setView("realistic")}>Vista realista*</button><button className={view==="technical"?"":"secondary"} onClick={()=>setView("technical")}>Vista técnica</button></div></div>
- <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Suelta un dispositivo cerca del carril para encajarlo; si una posición se superpone a otro dispositivo, vuelve a su posición anterior.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><div className="cabinet-file-actions"><button className="secondary" onClick={exportLayout}>↓ Exportar cuadro</button><button className="secondary" onClick={()=>fileInput.current?.click()}>↑ Importar cuadro</button><input ref={fileInput} type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>{void importLayout(e.target.files?.[0]);e.target.value="";}}/>{notice&&<p role="status" className="hint">{notice}</p>}</div><hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
+ <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Los dispositivos nuevos se colocan automáticamente en el primer hueco libre de un carril. También puedes arrastrarlos para recolocarlos.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><div className="cabinet-file-actions"><button className="secondary" onClick={exportLayout}>↓ Exportar cuadro</button><button className="secondary" onClick={()=>fileInput.current?.click()}>↑ Importar cuadro</button><input ref={fileInput} type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>{void importLayout(e.target.files?.[0]);e.target.value="";}}/>{notice&&<p role="status" className="hint">{notice}</p>}</div><hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
  <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
  <svg className="cabinet-svg" viewBox="0 0 720 520" role="img" aria-label="Armario eléctrico editable con componentes sobre carril DIN" onPointerMove={e=>{if(!drag)return;const p=toLocal(e.currentTarget,e);const px=360+(p.x-360)/zoom,py=260+(p.y-260)/zoom;setItems(v=>v.map(x=>x.id===drag.id?{...x,x:Math.max(30,Math.min(630,Math.round((px-drag.dx)/5)*5)),y:Math.max(35,Math.min(435,Math.round((py-drag.dy)/5)*5))}:x))}} onPointerUp={()=>{if(drag)setItems(v=>v.map(item=>{if(item.id!==drag.id)return item;const snapped=snapToRail(item,v);return collides(snapped,v)?drag.origin:snapped}));setDrag(null)}} onPointerCancel={()=>{if(drag)setItems(v=>v.map(item=>item.id===drag.id?drag.origin:item));setDrag(null)}}>
  <defs><pattern id="cabgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#dae5e9" strokeWidth=".8"/></pattern><linearGradient id="case" x1="0" x2="1"><stop stopColor="#d9e2e5"/><stop offset=".5" stopColor="#f7fafb"/><stop offset="1" stopColor="#bfcdd3"/></linearGradient></defs>
@@ -138,5 +168,5 @@ export default function Cabinet(){
  </>}
 
  </g>})}</g></svg><p className="hint">*Vista realista: actualmente representación ilustrada de alta fidelidad básica. Los acabados son ilustraciones SVG originales, NO fotografías ni modelos específicos de fabricante; no se presentan estas ilustraciones como fotos de productos reales.</p></div>
- <aside className="cabinet-properties"><h3>Propiedades</h3><div className="cabinet-rail-summary"><h4>Ocupación de carriles</h4>{railStats.length?railStats.map(stat=><p key={stat.id} className="hint">DIN{stat.id}: {stat.count} dispositivos · {Math.round(stat.used/360*100)}% ocupado visualmente · {Math.round(stat.free/360*100)}% libre</p>):<p className="hint">Añade un carril DIN para ver su ocupación.</p>}<p className="hint">Estimación basada en el dibujo, no en milímetros reales.</p></div><hr/>{selectedItem?(()=>{const d=catalog.find(x=>x.kind===selectedItem.kind)!;return <><strong>{d.name}</strong><p>Referencia: {d.ref}{selectedItem.id}</p>{selectedSpec&&<><h4>Ficha de referencia</h4><p><strong>Dimensiones orientativas:</strong><br/>{selectedSpec.widthMm} × {selectedSpec.heightMm} × {selectedSpec.depthMm} mm (ancho × alto × fondo)</p><p><strong>Montaje:</strong> {selectedSpec.mount}</p><p><strong>Bornes típicos:</strong> {selectedSpec.terminals.length?selectedSpec.terminals.join(", "):"No aplica"}</p><p className="hint">Las referencias de bornes son informativas. Los puntos azules de selección NO son bornes conectables.</p></>}<label>Posición X <input type="number" value={selectedItem.x} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,x:value},v)?{...x,x:value}:x))}}/></label><label>Posición Y <input type="number" value={selectedItem.y} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,y:value},v)?{...x,y:value}:x))}}/></label><button className="secondary" onClick={()=>{setItems(v=>v.filter(x=>x.id!==selected));setSelected(null)}}>Eliminar componente</button></>})():<p className="hint">Selecciona un componente para editar su posición.</p>}<hr/><p className="hint">Guardado automático en este navegador. El encaje en carril es geométrico y aproximado. Las dimensiones mostradas son orientativas y NO están aplicadas a escala en el dibujo. Esta versión NO valida fichas de fabricante, capacidad del carril, seguridad ni conexiones eléctricas.</p></aside></div></section>
+ <aside className="cabinet-properties"><h3>Propiedades</h3><div className="cabinet-rail-summary"><h4>Ocupación de carriles</h4>{railStats.length?railStats.map(stat=><p key={stat.id} className="hint">DIN{stat.id}: {stat.count} dispositivos · {Math.round(stat.used/360*100)}% ocupado visualmente · {Math.round(stat.free/360*100)}% libre</p>):<p className="hint">Añade un carril DIN para ver su ocupación.</p>}<p className="hint">El porcentaje libre es espacio total; puede estar repartido en varios huecos. Estimación visual, no milímetros reales.</p></div><hr/>{selectedItem?(()=>{const d=catalog.find(x=>x.kind===selectedItem.kind)!;return <><strong>{d.name}</strong><p>Referencia: {d.ref}{selectedItem.id}</p>{selectedSpec&&<><h4>Ficha de referencia</h4><p><strong>Dimensiones orientativas:</strong><br/>{selectedSpec.widthMm} × {selectedSpec.heightMm} × {selectedSpec.depthMm} mm (ancho × alto × fondo)</p><p><strong>Montaje:</strong> {selectedSpec.mount}</p><p><strong>Bornes típicos:</strong> {selectedSpec.terminals.length?selectedSpec.terminals.join(", "):"No aplica"}</p><p className="hint">Las referencias de bornes son informativas. Los puntos azules de selección NO son bornes conectables.</p></>}<label>Posición X <input type="number" value={selectedItem.x} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,x:value},v)?{...x,x:value}:x))}}/></label><label>Posición Y <input type="number" value={selectedItem.y} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,y:value},v)?{...x,y:value}:x))}}/></label><button className="secondary" onClick={()=>{setItems(v=>v.filter(x=>x.id!==selected));setSelected(null)}}>Eliminar componente</button></>})():<p className="hint">Selecciona un componente para editar su posición.</p>}<hr/><p className="hint">Guardado automático en este navegador. El encaje en carril es geométrico y aproximado. Las dimensiones mostradas son orientativas y NO están aplicadas a escala en el dibujo. Esta versión NO valida fichas de fabricante, capacidad del carril, seguridad ni conexiones eléctricas.</p></aside></div></section>
 }
