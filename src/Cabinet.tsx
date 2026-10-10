@@ -76,7 +76,36 @@ function downloadLayout(items:Item[]){
 function restore():Item[]{try{const a=JSON.parse(localStorage.getItem("electrolab-cabinet-v01")||"null");if(validLayout(a))return a}catch{}return sample}
 export default function Cabinet(){
  const [items,setItems]=useState<Item[]>(restore),[mode,setMode]=useState<"learning"|"engineering">("learning"),[view,setView]=useState<"realistic"|"technical">("realistic"),[selected,setSelected]=useState<number|null>(null),[drag,setDrag]=useState<{id:number;dx:number;dy:number;origin:Item}|null>(null),[zoom,setZoom]=useState(1);
- useEffect(()=>{localStorage.setItem("electrolab-cabinet-v01",JSON.stringify(items))},[items]);
+ const history=useRef<{past:Item[][];future:Item[][];last:string}>({past:[],future:[],last:JSON.stringify(items)});
+ const [historyStatus,setHistoryStatus]=useState({undo:0,redo:0});
+ const skipHistory=useRef(false);
+ useEffect(()=>{
+  const current=JSON.stringify(items);
+  const h=history.current;
+  if(current!==h.last){
+   if(skipHistory.current){skipHistory.current=false;}
+   else{h.past.push(JSON.parse(h.last) as Item[]);if(h.past.length>50)h.past.shift();h.future=[];}
+   h.last=current;
+   setHistoryStatus({undo:h.past.length,redo:h.future.length});
+  }
+  localStorage.setItem("electrolab-cabinet-v01",current);
+ },[items]);
+ const undo=()=>{
+  const h=history.current;if(!h.past.length)return;
+  const previous=h.past.pop()!;
+  h.future.push(JSON.parse(h.last) as Item[]);
+  skipHistory.current=true;h.last=JSON.stringify(previous);
+  setItems(previous);setSelected(null);
+  setHistoryStatus({undo:h.past.length,redo:h.future.length});
+ };
+ const redo=()=>{
+  const h=history.current;if(!h.future.length)return;
+  const next=h.future.pop()!;
+  h.past.push(JSON.parse(h.last) as Item[]);
+  skipHistory.current=true;h.last=JSON.stringify(next);
+  setItems(next);setSelected(null);
+  setHistoryStatus({undo:h.past.length,redo:h.future.length});
+ };
  const add=(kind:Kind)=>{
   const id=Math.max(0,...items.map(x=>x.id))+1;
   const item:Item={id,kind,x:115,y:245,...(kind==="rail"?{lengthMm:360}:{})};
@@ -221,7 +250,7 @@ export default function Cabinet(){
  const toLocal=(svg:SVGSVGElement,e:React.PointerEvent)=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM()!.inverse())};
  return <section className="cabinet"><div className="cabinet-head"><div><h2>Diseñador de cuadros eléctricos</h2><p>Distribución física de componentes · Prototipo de interfaz</p></div><div className="actions"><button className={mode==="learning"?"":"secondary"} onClick={()=>setMode("learning")}>🎓 Aprendizaje</button><button className={mode==="engineering"?"":"secondary"} onClick={()=>setMode("engineering")}>🏭 Revisión técnica</button><button className={view==="realistic"?"":"secondary"} onClick={()=>setView("realistic")}>Vista realista*</button><button className={view==="technical"?"":"secondary"} onClick={()=>setView("technical")}>Vista técnica</button></div></div>
  <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Añade carriles en filas libres; los dispositivos se montan automáticamente en un hueco disponible. Selecciona un dispositivo para duplicarlo en su carril.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><div className="cabinet-file-actions"><button className="secondary" onClick={exportLayout}>↓ Exportar cuadro</button><button className="secondary" onClick={exportMaterials}>↓ Lista de materiales (CSV)</button><button className="secondary" onClick={()=>fileInput.current?.click()}>↑ Importar cuadro</button><input ref={fileInput} type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>{void importLayout(e.target.files?.[0]);e.target.value="";}}/>{notice&&<p role="status" className="hint">{notice}</p>}</div><hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
- <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" onClick={exportSvg}>Exportar SVG</button><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
+ <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" disabled={!historyStatus.undo} onClick={undo} title="Deshacer el último cambio">↶ Deshacer</button><button className="secondary" disabled={!historyStatus.redo} onClick={redo} title="Rehacer el cambio">↷ Rehacer</button><button className="secondary" onClick={exportSvg}>Exportar SVG</button><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
  <svg ref={cabinetSvg} className="cabinet-svg" viewBox="0 0 720 520" role="img" aria-label="Armario eléctrico editable con componentes sobre carril DIN" onPointerMove={e=>{if(!drag)return;const p=toLocal(e.currentTarget,e);const px=360+(p.x-360)/zoom,py=260+(p.y-260)/zoom;setItems(v=>v.map(x=>x.id===drag.id?{...x,x:Math.max(30,Math.min(630,Math.round((px-drag.dx)/5)*5)),y:Math.max(35,Math.min(435,Math.round((py-drag.dy)/5)*5))}:x))}} onPointerUp={()=>{if(drag)setItems(v=>v.map(item=>{if(item.id!==drag.id)return item;const snapped=snapToRail(item,v);return collides(snapped,v)?drag.origin:snapped}));setDrag(null)}} onPointerCancel={()=>{if(drag)setItems(v=>v.map(item=>item.id===drag.id?drag.origin:item));setDrag(null)}}>
  <defs><pattern id="cabgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#dae5e9" strokeWidth=".8"/></pattern><linearGradient id="case" x1="0" x2="1"><stop stopColor="#d9e2e5"/><stop offset=".5" stopColor="#f7fafb"/><stop offset="1" stopColor="#bfcdd3"/></linearGradient></defs>
  <g transform={`translate(360 260) scale(${zoom}) translate(-360 -260)`}><rect x="48" y="26" width="624" height="470" rx="9" fill="url(#case)" stroke="#6e858d" strokeWidth="7"/><rect x="66" y="44" width="588" height="434" fill="url(#cabgrid)" stroke="#9baeb5" strokeWidth="2"/>
