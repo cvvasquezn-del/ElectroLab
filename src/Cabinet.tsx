@@ -117,6 +117,11 @@ export default function Cabinet(){
   const onKeyDown=(event:KeyboardEvent)=>{
    const target=event.target as HTMLElement|null;
    if(target?.closest("input,textarea,select,[contenteditable=true]"))return;
+   if(event.key==="Escape"){setSelected(null);return;}
+   if((event.key==="Delete"||event.key==="Backspace")&&!event.ctrlKey&&!event.metaKey&&!event.altKey){
+    if(selected===null||target?.closest("button,a,[role=button]"))return;
+    event.preventDefault();setItems(current=>current.filter(item=>item.id!==selected));setSelected(null);setNotice("Elemento eliminado. Puedes recuperarlo con Deshacer.");return;
+   }
    if(!(event.ctrlKey||event.metaKey)||event.altKey)return;
    const key=event.key.toLowerCase();
    if(key==="z"&&!event.shiftKey){event.preventDefault();undo();}
