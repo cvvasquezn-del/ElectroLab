@@ -45,7 +45,31 @@ Usar logotipo corporativo **oficial** autorizado, sin redibujarlo ni deformarlo.
 ## Estado real al redactar
 V0.1/V0.2: práctica CC idealizada, ley de Ohm y multímetro ideal. V0.3: editor **beta de topologías** sin bornes ni simulación, con guardado local. Se detectó y corrigió una regresión de navegación el 2026-10-10. No consta una compilación automatizada completa de la V0.3.
 
-## Pendiente de decisión
-- Confirmar prioridad entre editor/diseñador de cuadros y diagnóstico/academia.
-- Validar uso del logotipo corporativo original y localizar archivo exacto.
+## Decisiones de producto confirmadas (2026-10-10)
+- **Calidad profesional antes que rapidez**: entregas por fases, con pruebas, sin atajos visuales ni eléctricos.
+- **VinWizard**: producto como herramienta de la empresa; utilizar el logotipo corporativo oficial y branding VinWizard (no un logo inventado).
+- **Diseñador de cuadros**: vista **fotográfica y realista** como estilo destacado; selector para cambiar a vista **técnica simplificada**. Ambas vistas representan los mismos componentes y posiciones, no dos proyectos diferentes.
+- **Editor de esquemas**: espacio distinto, con simbología normalizada y bornes reales, vinculado mediante IDs de componente a la vista del cuadro.
+- **Prioridad visual**: lograr una experiencia de diseño profesional, pero sin anunciar simulación de funciones todavía no implementadas.
+
+## Arquitectura visual y de datos acordada
+- Cada dispositivo del proyecto tiene un **ID estable**, modelo, fabricante opcional, dimensiones, propiedades eléctricas, bornes, símbolo esquemático y dos representaciones visuales (realista/técnica).
+- **Vista realista**: recursos originales o licenciados (fotografía recortada de frente, PNG/WebP transparente o render propio), escala y anclaje coherentes, carriles DIN, canaletas, envolventes y disposición ordenada; zoom y ajuste a cuadrícula. No copiar activos del competidor.
+- **Vista técnica**: ilustraciones vectoriales ligeras y legibles, basadas en la misma geometría/posiciones que la realista.
+- **Esquema**: posiciones independientes de la vista física, conductores conectados a terminales; etiquetas y numeración coherentes con los dispositivos físicos.
+- **Motor eléctrico**: módulo independiente del render; cálculos por netlist, con pruebas de casos y avisos explícitos de circuitos no soportados.
+- **Identidad**: colores y tipografía extraídos de VinWizard-English/styles.css; añadir el logotipo oficial únicamente tras localizar y reutilizar el archivo exacto.
+- **Calidad**: validación de accesibilidad, navegación, pantalla táctil y ratón, exportaciones y persistencia. No dar por terminada una versión sin compilación y pruebas.
+
+## Hitos revisados
+1. Base profesional: arquitectura, diseño de interfaz, branding oficial, navegación y pruebas.
+2. Biblioteca piloto de 8–15 dispositivos bien modelados, con imagen realista propia/licenciada y vista técnica; diseñador de cuadro con carril DIN, zoom, arrastre y guardado.
+3. Esquema enlazado a dispositivos con bornes y cables; exportación.
+4. Simulación básica fiable y multímetro por puntos de prueba.
+5. Diagnóstico y formación industrial; ampliar catálogo progresivamente.
+
+## Pendiente de validación
+- Localizar el fichero exacto del logotipo corporativo oficial en repositorios/activos autorizados.
 - Validar simbología del profesor frente a IEC/UNE antes de implementar biblioteca.
+- Definir el primer conjunto de dispositivos y origen/licencias de fotografías.
+
