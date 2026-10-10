@@ -56,7 +56,7 @@ function snapToRail(item:Item,all:Item[]):Item{
  if(!near||near.distance>75)return item;
  return railSlot(item,all,near.rail)??item;
 }
-const sample:Item[]=[{id:1,kind:"rail",x:115,y:180},{id:2,kind:"breaker",x:140,y:128},{id:3,kind:"rcd",x:220,y:128},{id:4,kind:"contactor",x:345,y:124}];
+const sample:Item[]=[{id:1,kind:"rail",x:115,y:180,lengthMm:360},{id:2,kind:"breaker",x:120,y:138},{id:3,kind:"rcd",x:175,y:138},{id:4,kind:"contactor",x:268,y:133}];
 function validLayout(value:unknown):value is Item[]{
  return Array.isArray(value)&&value.length<=150&&value.every((x:unknown)=>{
   if(!x||typeof x!=="object")return false;
@@ -138,6 +138,23 @@ export default function Cabinet(){
   const members=items.filter(x=>mountedKinds.includes(x.kind)&&Math.abs(x.y+catalog.find(d=>d.kind===x.kind)!.height/2-(rail.y+8))<5&&x.x>=rail.x-1&&x.x<rail.x+railWidth(rail)+1);
   return members.every(x=>x.x>=proposed.x-1&&x.x+catalog.find(d=>d.kind===x.kind)!.width<=proposed.x+railWidth(proposed)+1);
  };
+ const cabinetSvg=useRef<SVGSVGElement>(null);
+ const exportSvg=()=>{
+  if(!cabinetSvg.current)return;
+  const clone=cabinetSvg.current.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  clone.setAttribute("width","1440");
+  clone.setAttribute("height","1040");
+  const description=document.createElementNS("http://www.w3.org/2000/svg","desc");
+  description.textContent="ElectroLab: vista educativa ilustrativa, no a escala ni válida para ejecución o certificación de instalaciones eléctricas.";
+  clone.insertBefore(description,clone.firstChild);
+  const blob=new Blob([new XMLSerializer().serializeToString(clone)],{type:"image/svg+xml;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;link.download="electrolab-cuadro.svg";document.body.appendChild(link);link.click();link.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setNotice("Vista exportada como SVG. Es una ilustración educativa, no un plano a escala.");
+ };
  const fileInput=useRef<HTMLInputElement>(null);
  const [notice,setNotice]=useState("");
  const exportLayout=()=>{downloadLayout(items);setNotice("Cuadro exportado en formato JSON.");};
@@ -183,8 +200,8 @@ export default function Cabinet(){
  const toLocal=(svg:SVGSVGElement,e:React.PointerEvent)=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM()!.inverse())};
  return <section className="cabinet"><div className="cabinet-head"><div><h2>Diseñador de cuadros eléctricos</h2><p>Distribución física de componentes · Prototipo de interfaz</p></div><div className="actions"><button className={mode==="learning"?"":"secondary"} onClick={()=>setMode("learning")}>🎓 Aprendizaje</button><button className={mode==="engineering"?"":"secondary"} onClick={()=>setMode("engineering")}>🏭 Revisión técnica</button><button className={view==="realistic"?"":"secondary"} onClick={()=>setView("realistic")}>Vista realista*</button><button className={view==="technical"?"":"secondary"} onClick={()=>setView("technical")}>Vista técnica</button></div></div>
  <div className="cabinet-layout"><aside className="cabinet-sidebar"><h3>Biblioteca</h3><p className="hint">Pulsa para añadir al cuadro. Añade carriles en filas libres; los dispositivos se montan automáticamente en un hueco disponible. Selecciona un dispositivo para duplicarlo en su carril.</p>{catalog.map(x=><button key={x.kind} className="cabinet-add" onClick={()=>add(x.kind)}><span>＋</span>{x.name}</button>)}<hr/><div className="cabinet-file-actions"><button className="secondary" onClick={exportLayout}>↓ Exportar cuadro</button><button className="secondary" onClick={()=>fileInput.current?.click()}>↑ Importar cuadro</button><input ref={fileInput} type="file" accept=".json,application/json" style={{display:"none"}} onChange={e=>{void importLayout(e.target.files?.[0]);e.target.value="";}}/>{notice&&<p role="status" className="hint">{notice}</p>}</div><hr/><button className="secondary" onClick={()=>{if(window.confirm("¿Restablecer el cuadro de ejemplo?")){setItems(sample);setSelected(null)}}}>Restablecer ejemplo</button></aside>
- <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
- <svg className="cabinet-svg" viewBox="0 0 720 520" role="img" aria-label="Armario eléctrico editable con componentes sobre carril DIN" onPointerMove={e=>{if(!drag)return;const p=toLocal(e.currentTarget,e);const px=360+(p.x-360)/zoom,py=260+(p.y-260)/zoom;setItems(v=>v.map(x=>x.id===drag.id?{...x,x:Math.max(30,Math.min(630,Math.round((px-drag.dx)/5)*5)),y:Math.max(35,Math.min(435,Math.round((py-drag.dy)/5)*5))}:x))}} onPointerUp={()=>{if(drag)setItems(v=>v.map(item=>{if(item.id!==drag.id)return item;const snapped=snapToRail(item,v);return collides(snapped,v)?drag.origin:snapped}));setDrag(null)}} onPointerCancel={()=>{if(drag)setItems(v=>v.map(item=>item.id===drag.id?drag.origin:item));setDrag(null)}}>
+ <div className="cabinet-workspace"><div className="cabinet-toolbar"><span>Armario de práctica · 600 × 800 mm (referencia visual)</span><div className="actions"><button className="secondary" onClick={exportSvg}>Exportar SVG</button><button className="secondary" onClick={()=>setZoom(z=>Math.max(.7,+(z-.1).toFixed(1)))}>−</button><span>{Math.round(zoom*100)}%</span><button className="secondary" onClick={()=>setZoom(z=>Math.min(1.5,+(z+.1).toFixed(1)))}>＋</button></div></div>
+ <svg ref={cabinetSvg} className="cabinet-svg" viewBox="0 0 720 520" role="img" aria-label="Armario eléctrico editable con componentes sobre carril DIN" onPointerMove={e=>{if(!drag)return;const p=toLocal(e.currentTarget,e);const px=360+(p.x-360)/zoom,py=260+(p.y-260)/zoom;setItems(v=>v.map(x=>x.id===drag.id?{...x,x:Math.max(30,Math.min(630,Math.round((px-drag.dx)/5)*5)),y:Math.max(35,Math.min(435,Math.round((py-drag.dy)/5)*5))}:x))}} onPointerUp={()=>{if(drag)setItems(v=>v.map(item=>{if(item.id!==drag.id)return item;const snapped=snapToRail(item,v);return collides(snapped,v)?drag.origin:snapped}));setDrag(null)}} onPointerCancel={()=>{if(drag)setItems(v=>v.map(item=>item.id===drag.id?drag.origin:item));setDrag(null)}}>
  <defs><pattern id="cabgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#dae5e9" strokeWidth=".8"/></pattern><linearGradient id="case" x1="0" x2="1"><stop stopColor="#d9e2e5"/><stop offset=".5" stopColor="#f7fafb"/><stop offset="1" stopColor="#bfcdd3"/></linearGradient></defs>
  <g transform={`translate(360 260) scale(${zoom}) translate(-360 -260)`}><rect x="48" y="26" width="624" height="470" rx="9" fill="url(#case)" stroke="#6e858d" strokeWidth="7"/><rect x="66" y="44" width="588" height="434" fill="url(#cabgrid)" stroke="#9baeb5" strokeWidth="2"/>
  {[...items].sort((a,b)=>Number(b.kind==="rail"||b.kind==="duct")-Number(a.kind==="rail"||a.kind==="duct")).map(item=>{const base=catalog.find(x=>x.kind===item.kind)!;const d=item.kind==="rail"?{...base,width:railWidth(item)}:base;const isRail=item.kind==="rail",isDuct=item.kind==="duct";return <g key={item.id} transform={`translate(${item.x} ${item.y})`} onPointerDown={e=>{e.stopPropagation();setSelected(item.id);const svg=e.currentTarget.ownerSVGElement!;const p=toLocal(svg,e);setDrag({id:item.id,dx:360+(p.x-360)/zoom-item.x,dy:260+(p.y-260)/zoom-item.y,origin:{...item}});svg.setPointerCapture(e.pointerId)}} style={{cursor:"grab",touchAction:"none"}}>
