@@ -1,11 +1,11 @@
 # Identidad visual de ElectroLab
 
-ElectroLab utiliza la identidad aplicada en el repositorio VinWizard-English. La interfaz está organizada como un espacio de trabajo de formación interna, con cuatro módulos: práctica guiada, ley de Ohm, esquemas y cuadros eléctricos.
+ElectroLab pertenece a la rama eléctrica ElecWizard y utiliza el logotipo suministrado por la usuaria. Conserva la paleta y tipografía de la familia VinWizard. La interfaz está organizada como un espacio de trabajo de formación interna, con cuatro módulos: práctica guiada, ley de Ohm, esquemas y cuadros eléctricos.
 
 ## Fuentes de marca
 
 - Paleta y tipografía: `VinWizard-English/styles.css`.
-- Logo: `VinWizard-English/public/media/vinwizard-original-v4.svg`, copiado a `public/brand/vinwizard-original.svg`. Es el archivo original suministrado, conservado sin filtros, recoloreado ni alteración de proporciones.
+- Logo activo: `public/brand/elecwizard-original.png`, suministrado por la usuaria el 11 de octubre de 2026. Se conserva exactamente el PNG recibido, sin filtros, recoloreado ni alteración de proporciones. La cabecera y el pie identifican la rama ElecWizard.
 - Tipografía: Poppins, pesos 400, 500, 600 y 700, con Arial y sans-serif como alternativas. Se carga desde Google Fonts; si no hay acceso a internet se utiliza la alternativa local.
 
 | Uso | Color |

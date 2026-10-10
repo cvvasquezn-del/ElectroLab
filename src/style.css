@@ -115,8 +115,8 @@ button.secondary:hover:not(:disabled) {
 
 .brand-logo {
   display:block;
-  width:140px;
-  height:80px;
+  width:240px;
+  height:55px;
   object-fit:contain;
 }
 
@@ -1038,8 +1038,8 @@ input[type=number],select {
     gap:16px;
   }
   .brand-logo {
-    width:125px;
-    height:72px;
+    width:200px;
+    height:46px;
   }
   .brand-lockup h1 {
     font-size:24px;
@@ -1122,8 +1122,8 @@ input[type=number],select {
     gap:14px;
   }
   .brand-logo {
-    width:115px;
-    height:68px;
+    width:160px;
+    height:37px;
   }
   .brand-lockup h1 {
     font-size:22px;
