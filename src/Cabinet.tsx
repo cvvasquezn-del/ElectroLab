@@ -47,7 +47,37 @@ export default function Cabinet(){
  <g transform={`translate(360 260) scale(${zoom}) translate(-360 -260)`}><rect x="48" y="26" width="624" height="470" rx="9" fill="url(#case)" stroke="#6e858d" strokeWidth="7"/><rect x="66" y="44" width="588" height="434" fill="url(#cabgrid)" stroke="#9baeb5" strokeWidth="2"/>
  {items.map(item=>{const d=catalog.find(x=>x.kind===item.kind)!;const isRail=item.kind==="rail",isDuct=item.kind==="duct";return <g key={item.id} transform={`translate(${item.x} ${item.y})`} onPointerDown={e=>{e.stopPropagation();setSelected(item.id);const svg=e.currentTarget.ownerSVGElement!;const p=toLocal(svg,e);setDrag({id:item.id,dx:360+(p.x-360)/zoom-item.x,dy:260+(p.y-260)/zoom-item.y,origin:{...item}});svg.setPointerCapture(e.pointerId)}} style={{cursor:"grab",touchAction:"none"}}>
  <rect width={d.width} height={d.height} rx={isRail?2:4} fill={isRail?"#8da1ac":isDuct?"#c5d2d7":view==="realistic"?"#f6f7f8":"#e6f2f4"} stroke={selected===item.id?"#009abf":"#6c7f87"} strokeWidth={selected===item.id?3:1.5}/>
- {isRail?Array.from({length:12},(_,i)=><rect key={i} x={i*29+9} y="5" width="14" height="6" fill="#536872"/>):isDuct?Array.from({length:10},(_,i)=><path key={i} d={`M3 ${i*29+8}H32`} stroke="#899fa8" strokeWidth="2"/>):<><rect x="5" y="6" width={d.width-10} height="13" rx="2" fill={view==="realistic"?"#d9e4e9":"#b9dce3"}/><text x={d.width/2} y="16" textAnchor="middle" fontSize="8" fill="#00303c" fontWeight="bold">{d.ref}{item.id}</text><rect x={d.width*.24} y={d.height*.36} width={d.width*.52} height="22" rx="3" fill={view==="realistic"?"#aebcc3":"#bfd8df"} stroke="#7b8e97"/><rect x={d.width*.38} y={d.height*.42} width={d.width*.24} height="9" rx="2" fill="#3b5e6c"/><path d={`M7 ${d.height-10}H${d.width-7}`} stroke="#a4b4ba" strokeWidth="2"/></>}
- </g>})}</g></svg><p className="hint">*Vista realista: actualmente representación ilustrada de alta fidelidad básica. Las fotografías originales/licenciadas y los modelos a escala están pendientes; no se presentan estas ilustraciones como fotos de productos reales.</p></div>
- <aside className="cabinet-properties"><h3>Propiedades</h3>{selectedItem?(()=>{const d=catalog.find(x=>x.kind===selectedItem.kind)!;return <><strong>{d.name}</strong><p>Referencia: {d.ref}{selectedItem.id}</p><label>Posición X <input type="number" value={selectedItem.x} onChange={e=>setItems(v=>v.map(x=>x.id===selected?{...x,x:Number(e.target.value)}:x))}/></label><label>Posición Y <input type="number" value={selectedItem.y} onChange={e=>setItems(v=>v.map(x=>x.id===selected?{...x,y:Number(e.target.value)}:x))}/></label><button className="secondary" onClick={()=>{setItems(v=>v.filter(x=>x.id!==selected));setSelected(null)}}>Eliminar componente</button></>})():<p className="hint">Selecciona un componente para editar su posición.</p>}<hr/><p className="hint">Guardado automático en este navegador. El encaje en carril es geométrico y aproximado. Esta versión NO valida dimensiones de fabricante, capacidad del carril, seguridad ni conexiones eléctricas.</p></aside></div></section>
+ {isRail?Array.from({length:12},(_,i)=><rect key={i} x={i*29+9} y="5" width="14" height="6" fill="#536872"/>):isDuct?Array.from({length:10},(_,i)=><path key={i} d={`M3 ${i*29+8}H32`} stroke="#899fa8" strokeWidth="2"/>):view==="technical"?<>
+ <rect x="5" y="6" width={d.width-10} height={d.height-12} rx="2" fill="#eaf7fa" stroke="#165572" strokeDasharray="3 2"/>
+ <text x={d.width/2} y="19" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#00303c">{d.ref}{item.id}</text>
+ <path d={`M10 ${d.height/2}H${d.width-10}`} stroke="#165572" strokeWidth="2"/>
+ <circle cx={d.width/2} cy={d.height/2} r="7" fill="white" stroke="#165572" strokeWidth="2"/>
+ <text x={d.width/2} y={d.height-13} textAnchor="middle" fontSize="7" fill="#165572">{item.kind==="breaker"?"MCB":item.kind==="rcd"?"RCD":item.kind==="contactor"?"KM":item.kind==="overload"?"OL":"X"}</text>
+ </>:<>
+ <rect x="3" y="3" width={d.width-6} height={d.height-6} rx="4" fill="#f7f8f6" stroke="#b0b9bc"/>
+ <rect x="6" y="5" width={d.width-12} height="14" rx="2" fill="#e0e8e9" stroke="#bdc8cb" strokeWidth=".6"/>
+ <text x={d.width/2} y="14" textAnchor="middle" fontSize="8" fill="#00303c" fontWeight="bold">{d.ref}{item.id}</text>
+ {Array.from({length:Math.min(4,Math.max(1,Math.floor(d.width/21)))},(_,i)=>{const n=Math.min(4,Math.max(1,Math.floor(d.width/21)));const tx=(i+.5)*d.width/n;return <g key={i}><rect x={tx-5} y="22" width="10" height="7" rx="1" fill="#9eaaad" stroke="#62777e" strokeWidth=".5"/><circle cx={tx} cy="25.5" r="2.3" fill="#4e6067"/><path d={`M${tx-1.5} 25.5h3`} stroke="#c6d1d4" strokeWidth=".6"/><rect x={tx-5} y={d.height-13} width="10" height="7" rx="1" fill="#a6b2b5" stroke="#62777e" strokeWidth=".5"/><circle cx={tx} cy={d.height-9.5} r="2.3" fill="#4e6067"/></g>})}
+ <rect x="8" y="32" width={d.width-16} height={d.height-52} rx="2" fill="#eff1ee" stroke="#d0d6d4" strokeWidth=".8"/>
+ {item.kind==="breaker"||item.kind==="rcd"?<>
+ <text x={d.width/2} y="42" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#3c4d54">{item.kind==="breaker"?"C16":"30mA"}</text>
+ <rect x={d.width/2-9} y="48" width="18" height="29" rx="3" fill="#c7d1d3" stroke="#82949b"/>
+ <rect x={d.width/2-6} y="51" width="12" height="14" rx="2" fill="#334d5a" stroke="#162e39"/>
+ <text x={d.width/2} y="87" textAnchor="middle" fontSize="7" fill="#5b707a">I / O</text>
+ {item.kind==="rcd"&&<><rect x={d.width-26} y="44" width="14" height="10" rx="2" fill="#dce5e6" stroke="#6c7f87"/><text x={d.width-19} y="51" textAnchor="middle" fontSize="6" fill="#00303c">T</text></>}
+ </>:item.kind==="contactor"?<>
+ <text x={d.width/2} y="44" textAnchor="middle" fontSize="7" fill="#40555c">A1 · A2</text>
+ <rect x={d.width/2-20} y="49" width="40" height="27" rx="3" fill="#cbd4d5" stroke="#879ba2"/>
+ <rect x={d.width/2-13} y="55" width="26" height="15" rx="2" fill="#5b727c"/>
+ <text x={d.width/2} y="90" textAnchor="middle" fontSize="7" fill="#40555c">L1 L2 L3</text>
+ </>:item.kind==="overload"?<>
+ <text x={d.width/2} y="43" textAnchor="middle" fontSize="7" fill="#40555c">RESET</text>
+ <circle cx={d.width/2-11} cy="56" r="6" fill="#dfe8e8" stroke="#81959c"/>
+ <circle cx={d.width/2+11} cy="56" r="6" fill="#e1251b" stroke="#a21d15"/>
+ </>:<><rect x={d.width/2-7} y="42" width="14" height="15" rx="2" fill="#bac8cc" stroke="#6b8088"/><circle cx={d.width/2} cy="49" r="3" fill="#455e68"/></>}
+ <rect x="8" y={d.height-19} width={d.width-16} height="3" rx="1" fill="#c7d2d5"/>
+ </>}
+
+ </g>})}</g></svg><p className="hint">*Vista realista: actualmente representación ilustrada de alta fidelidad básica. Los acabados son ilustraciones SVG originales, NO fotografías ni modelos específicos de fabricante; no se presentan estas ilustraciones como fotos de productos reales.</p></div>
+ <aside className="cabinet-properties"><h3>Propiedades</h3>{selectedItem?(()=>{const d=catalog.find(x=>x.kind===selectedItem.kind)!;return <><strong>{d.name}</strong><p>Referencia: {d.ref}{selectedItem.id}</p><label>Posición X <input type="number" value={selectedItem.x} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,x:value},v)?{...x,x:value}:x))}}/></label><label>Posición Y <input type="number" value={selectedItem.y} onChange={e=>{const value=Number(e.target.value);if(Number.isFinite(value))setItems(v=>v.map(x=>x.id===selected&&!collides({...x,y:value},v)?{...x,y:value}:x))}}/></label><button className="secondary" onClick={()=>{setItems(v=>v.filter(x=>x.id!==selected));setSelected(null)}}>Eliminar componente</button></>})():<p className="hint">Selecciona un componente para editar su posición.</p>}<hr/><p className="hint">Guardado automático en este navegador. El encaje en carril es geométrico y aproximado. Esta versión NO valida dimensiones de fabricante, capacidad del carril, seguridad ni conexiones eléctricas.</p></aside></div></section>
 }
