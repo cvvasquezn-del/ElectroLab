@@ -1308,9 +1308,12 @@ input[type=number],select {
 .terminal-layer [role=button]:focus-visible{outline:2px solid #009abf;outline-offset:3px}
 .schematic-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
 .schematic-inspector{min-width:0}
+.schematic-layout > .cabinet-workspace{grid-column:1;grid-row:1}
+.schematic-layout > .schematic-inspector{grid-column:2;grid-row:1}
 .shared-schematic-canvas{display:block;width:100%;height:auto;border:1px solid #dce6e9;border-radius:8px}
 .schematic-mode{margin-bottom:16px}
 @media(min-width:1201px){.physical-properties-wrap{max-height:980px;overflow:auto}}
-@media(max-width:1000px){.schematic-layout{grid-template-columns:minmax(0,1fr)}.schematic-inspector .connection-panel{display:block}}
+@media(max-width:1000px){.schematic-layout{grid-template-columns:minmax(0,1fr)}.schematic-layout > .schematic-inspector{grid-column:1;grid-row:2}.schematic-inspector .connection-panel{display:block}}
 @media(max-width:580px){.wiring-toolbar{align-items:stretch}.wiring-toolbar .control-group{width:100%}.connection-panel{padding:14px}.connection-row{flex-wrap:wrap}}
 .removal-confirm{background:#f1f6f7;border:1px solid #009abf;border-radius:8px;padding:16px;margin-bottom:14px}.removal-confirm p{font-size:13px}
+
