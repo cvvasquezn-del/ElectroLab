@@ -8,7 +8,7 @@ export type ProjectResult={ok:true;project:ConnectedProject}|{ok:false;error:str
 export const wireColors=['#165572','#009abf','#e1251b','#5b707a','#2ed9c3'];
 export const isElectrical=(kind:Kind)=>kind!=='rail'&&kind!=='duct';
 export function freeReference(prefix:string,used:string[]){let n=1;while(used.includes(prefix+n))n++;return prefix+n;}
-export function schematicHeight(count:number,positions:{y:number}[]=[]){return Math.max(450,140*Math.ceil(count/4)+100,...positions.map(s=>s.y+80));}
+export function schematicHeight(count:number,positions:{y:number}[]=[]){return Math.max(240,140*Math.ceil(count/4)+100,...positions.map(s=>s.y+80));}
 export function migratePhysical(p:PhysicalProject):ConnectedProject{
  const copy=structuredClone(p);
  const items=copy.items.map((i,n)=>({...i,reference:referenceFor(p,p.items[n])}));
