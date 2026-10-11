@@ -1,4 +1,4 @@
-import {modelFor,type PhysicalProject,type PhysicalItem,type RectMm,type PointMm} from './model.js';
+import {modelFor,referenceFor,type PhysicalProject,type PhysicalItem,type RectMm,type PointMm} from './model.js';
 // Floating-point arithmetic tolerance in mm; far below any displayed measure.
 const EPS=1e-9;
 export type Result={ok:true;project:PhysicalProject}|{ok:false;error:string};
@@ -11,7 +11,7 @@ export function validatePlacement(p:PhysicalProject):string[]{
  const errors:string[]=[];
  if(!contains({xMm:0,yMm:0,...p.envelope},p.plate))errors.push('La placa útil debe quedar dentro de la envolvente.');
  for(const i of p.items){
- const a=footprint(p,i),m=modelFor(p,i),name=m.name+' '+m.ref+(p.items.indexOf(i)+1);
+ const a=footprint(p,i),m=modelFor(p,i),name=m.name+' '+referenceFor(p,i);
  if(!contains(p.plate,a))errors.push(name+': excede los límites de la placa útil.');
  if(i.railId!==undefined){
  const rail=p.items.find(r=>r.id===i.railId);

@@ -2,7 +2,7 @@ export type Kind='breaker'|'rcd'|'contactor'|'overload'|'terminal'|'rail'|'duct'
 export type PointMm={xMm:number;yMm:number};
 export type RectMm=PointMm & {widthMm:number;heightMm:number};
 export type DeviceModel={id:string;kind:Kind;name:string;ref:string;widthMm:number;heightMm:number;depthMm:number;didactic:true};
-export type PhysicalItem=PointMm & {id:string;modelId:string;railId?:string;lengthMm?:number};
+export type PhysicalItem=PointMm & {id:string;modelId:string;railId?:string;lengthMm?:number;reference?:string};
 export type PhysicalProject={format:'electrolab-cabinet';version:2;id:string;envelope:{widthMm:number;heightMm:number};plate:RectMm;reserveMm:number;models:DeviceModel[];items:PhysicalItem[]};
 export const kinds:Kind[]=['breaker','rcd','contactor','overload','terminal','rail','duct'];
 export const models:DeviceModel[]=[
@@ -25,4 +25,4 @@ export function createPhysicalProject():PhysicalProject{
 }
 
 
-export function referenceFor(p:PhysicalProject,i:PhysicalItem){return modelFor(p,i).ref+(p.items.indexOf(i)+1);}
+export function referenceFor(p:PhysicalProject,i:PhysicalItem){return i.reference??modelFor(p,i).ref+(p.items.indexOf(i)+1);}
