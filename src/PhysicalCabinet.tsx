@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {createPhysicalProject,modelFor,type PhysicalProject,type PointMm} from './cabinet/model.js';
 import {checked,footprint,findRailSlot,removeItem,type Result} from './cabinet/geometry.js';
-import {addDevice,duplicateDevice,organizeRail} from './cabinet/operations.js';
+import {addDevice,duplicateDevice,organizeRail,placementCommit} from './cabinet/operations.js';
 import {parseProject,serializeProject,validateProject} from './cabinet/serialization.js';
 import {browserStorage,recoverPhysical,savePhysical} from './cabinet/storage.js';
 import {useProjectHistory} from './cabinet/useProjectHistory';
@@ -48,7 +48,10 @@ export default function PhysicalCabinet({importedProject,onRequestImport,active}
  const r=footprint(next,moved);const near=next.items.filter(i=>modelFor(next,i).kind==='rail').map(i=>({i,d:Math.abs(i.yMm+footprint(next,i).heightMm/2-r.yMm-r.heightMm/2)})).filter(a=>a.d<=20).sort((a,b)=>a.d-b.d)[0];
  if(near){const slot=findRailSlot(next,moved,near.i,moved.xMm);if(!slot){history.cancelDrag();dragBase.current=null;setNotice('No hay un hueco continuo disponible en ese carril.');return;}next={...next,items:next.items.map(i=>i.id===moved.id?{...i,...slot,railId:near.i.id}:i)};}
  }
- const result=validateProject(next);if(!result.ok){history.cancelDrag();setNotice(result.error);}else{history.preview(next);history.finishDrag();setProtectedRecovery(false);setNotice('Posición actualizada.');}
+ const result=placementCommit(dragBase.current,next);
+ if(!result.ok){history.cancelDrag();setNotice(result.error);}
+ else if(!result.changed){history.cancelDrag();}
+ else{history.preview(result.project);history.finishDrag();setProtectedRecovery(false);setNotice('Posición actualizada.');}
  dragBase.current=null;
  }
  const groups=[{label:'Estructura',kinds:['rail','duct']},{label:'Protección',kinds:['breaker','rcd']},{label:'Maniobra',kinds:['contactor','overload']},{label:'Conexión',kinds:['terminal']}];

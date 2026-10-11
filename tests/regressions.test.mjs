@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createPhysicalProject} from '../.test-build/cabinet/model.js';
 import {validatePlacement,contains,overlaps} from '../.test-build/cabinet/geometry.js';
-import {addDevice} from '../.test-build/cabinet/operations.js';
+import {addDevice,placementCommit} from '../.test-build/cabinet/operations.js';
 import {parseProject,serializeProject} from '../.test-build/cabinet/serialization.js';
 import {physicalSvg} from '../.test-build/cabinet/exports.js';
 import {recoverPhysical,savePhysical} from '../.test-build/cabinet/storage.js';
@@ -13,6 +13,12 @@ test('recuperación fallida protege el original hasta una edición explícita',(
  assert.equal(savePhysical(storage,recovered.project,recovered.protected).ok,false);
  assert.equal(map.get('electrolab-cabinet-v02'),raw);
  assert.equal(savePhysical(storage,recovered.project,false).ok,true);
+});
+test('seleccionar sin mover no autoriza reemplazar una recuperación fallida',()=>{
+ const p=createPhysicalProject(),result=placementCommit(p,structuredClone(p));
+ assert.equal(result.ok,true);assert.equal(result.changed,false);
+ const moved=structuredClone(p);moved.items[0].xMm=900;
+ assert.equal(placementCommit(p,moved).ok,false);
 });
 test('contacto decimal y límite de carril no son penetración',()=>{
  const p=createPhysicalProject(),r=p.items[0];p.models[0].widthMm=17.1;

@@ -1,5 +1,11 @@
 import {modelFor,type PhysicalProject,type PhysicalItem} from './model.js';
 import {checked,findRailSlot,footprint,type Result} from './geometry.js';
+import {validateProject} from './serialization.js';
+export function placementCommit(before:PhysicalProject,next:PhysicalProject):({ok:true;project:PhysicalProject;changed:boolean}|{ok:false;error:string}){
+ if(JSON.stringify(before)===JSON.stringify(next))return {ok:true,project:before,changed:false};
+ const result=validateProject(next);
+ return result.ok&&result.project.version===2?{ok:true,project:result.project,changed:true}:{ok:false,error:result.ok?'Formato físico requerido.':result.error};
+}
 export function addDevice(p:PhysicalProject,modelId:string):Result{
  if(p.items.length>=150)return {ok:false,error:'Máximo 150 elementos por cuadro.'};
  const m=p.models.find(m=>m.id===modelId);if(!m)return {ok:false,error:'Modelo inexistente.'};
