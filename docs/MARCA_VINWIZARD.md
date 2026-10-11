@@ -27,4 +27,6 @@ ElectroLab pertenece a la rama eléctrica ElecWizard y utiliza el logotipo sumin
 
 En pantallas de hasta 1200 px, la inspección se sitúa bajo el área de trabajo. Hasta 800 px la navegación utiliza dos columnas; hasta 580 px biblioteca, montaje e inspección se apilan. Los controles disponen de foco visible y se respeta la preferencia de reducir movimiento.
 
-Esta actualización conserva la geometría ilustrativa, los cálculos, las claves de almacenamiento, el formato JSON v1 y los mecanismos de historial. La organización visual no añade simulación eléctrica ni validación normativa.
+El modo ilustrativo conserva su geometría, cálculos, clave de almacenamiento y formato JSON v1. El historial compartido agrupa los arrastres en transacciones. El modo físico utiliza otra clave y JSON v2; el selector distingue ambos sin convertir los proyectos.
+
+El montaje físico usa las mismas huellas en las vistas técnica e ilustrada. Archivos y materiales se agrupan en una barra compacta; la inspección continúa directamente debajo del montaje en tablet. El PNG ElecWizard original se conserva sin modificaciones. No se añade simulación eléctrica ni validación normativa.
